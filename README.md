@@ -14,10 +14,34 @@ verify it even if that site is gone** — the proof outlives the platform.
 ## Live
 
 - **Demo:** https://ryjin111.github.io/mythosforge-offsite-verifier/
+- **Spec:** [`SPEC.md`](./SPEC.md) — Proof of Creation v1
 - **RPC field is editable** — point it at *any* public Base node to prove the
   verifier is never talking to MythosForge infra.
 
-## Run locally
+## Use as a library (`@mythosforge/verify`)
+
+```bash
+npm install @mythosforge/verify
+```
+
+```js
+import { verifyCreation } from '@mythosforge/verify';
+
+const result = await verifyCreation(
+  '54851462332250288029513346248177259202425846707039409026292648779135787226601'
+);
+
+console.log(result.badge);          // 'Minted'
+console.log(result.manifestHash);   // '0x7944d3d6…9855e9'
+console.log(result.anchor.source);  // 'platform'  (Platform-Attested)
+```
+
+Zero dependencies. Node 18+. Browser-compatible (it's just `fetch` + the
+Web Crypto-friendly primitives). Reads Base directly — no MythosForge API calls.
+
+See [`SPEC.md`](./SPEC.md) for the protocol-level contract this implements.
+
+## Run the demo locally
 
 ```bash
 # Headless proof (Node 18+), verifies a real creation off-site:

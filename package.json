@@ -1,0 +1,46 @@
+{
+  "name": "@mythosforge/verify",
+  "version": "1.0.0",
+  "description": "Verify any MythosForge Proof of Creation entirely from the Base blockchain. Zero MythosForge API calls. Zero dependencies. Reference implementation of the Proof of Creation v1 spec.",
+  "type": "module",
+  "main": "./verify-core.mjs",
+  "exports": {
+    ".": {
+      "types": "./verify-core.d.ts",
+      "default": "./verify-core.mjs"
+    }
+  },
+  "types": "./verify-core.d.ts",
+  "files": [
+    "verify-core.mjs",
+    "verify-core.d.ts",
+    "SPEC.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mythosforge",
+    "proof-of-creation",
+    "ai-creation-layer",
+    "provenance",
+    "base",
+    "blockchain",
+    "ai-art",
+    "verify",
+    "erc-1155",
+    "anchor"
+  ],
+  "author": "MythosForge",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryjin111/mythosforge-offsite-verifier.git"
+  },
+  "homepage": "https://ryjin111.github.io/mythosforge-offsite-verifier/",
+  "bugs": {
+    "url": "https://github.com/ryjin111/mythosforge-offsite-verifier/issues"
+  }
+}
