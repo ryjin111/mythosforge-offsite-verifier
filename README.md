@@ -18,15 +18,32 @@ verify it even if that site is gone** — the proof outlives the platform.
 - **RPC field is editable** — point it at *any* public Base node to prove the
   verifier is never talking to MythosForge infra.
 
-## Use as a library (`@mythosforge/verify`)
+## Use as a library
 
+The repo IS the distribution — three ways to consume it, no npm registry required:
+
+**Option 1 — Install from GitHub** (npm-style, no registry account needed):
 ```bash
-npm install @mythosforge/verify
+npm install github:ryjin111/mythosforge-offsite-verifier
 ```
-
+…then import:
 ```js
 import { verifyCreation } from '@mythosforge/verify';
+```
 
+**Option 2 — Copy the kernel** (it's a single zero-dependency file):
+```bash
+curl -O https://raw.githubusercontent.com/ryjin111/mythosforge-offsite-verifier/main/verify-core.mjs
+```
+…then import locally:
+```js
+import { verifyCreation } from './verify-core.mjs';
+```
+
+**Option 3 — Fork the repo.** For customization or contribution. The kernel is ~250 lines; fork, modify, ship.
+
+All three give the same surface:
+```js
 const result = await verifyCreation(
   '54851462332250288029513346248177259202425846707039409026292648779135787226601'
 );
@@ -36,10 +53,15 @@ console.log(result.manifestHash);   // '0x7944d3d6…9855e9'
 console.log(result.anchor.source);  // 'platform'  (Platform-Attested)
 ```
 
-Zero dependencies. Node 18+. Browser-compatible (it's just `fetch` + the
-Web Crypto-friendly primitives). Reads Base directly — no MythosForge API calls.
+Zero dependencies. Node 18+. Browser-compatible (just `fetch` + standard built-ins).
+Reads Base directly — no MythosForge API calls.
 
 See [`SPEC.md`](./SPEC.md) for the protocol-level contract this implements.
+
+> The `package.json` declares the future canonical name `@mythosforge/verify`,
+> but the package is **not currently published to npm** — install via
+> `github:` or copy the kernel directly. npm publish is deferred until the
+> verify surface stabilizes alongside v3 sign-at-generation.
 
 ## Run the demo locally
 
