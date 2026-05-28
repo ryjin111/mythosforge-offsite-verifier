@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MythosForge — Off-site Proof Verifier (v2.5)</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0b0b0f; color: #e7e7ea;
+         font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: #9aa; margin: 0 0 24px; }
+  .indep { background: #0e2a1a; border: 1px solid #1f6f43; color: #9be8bd;
+           border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 22px; }
+  .row { display: flex; gap: 8px; }
+  input { flex: 1; background: #15151c; border: 1px solid #2a2a36; color: #e7e7ea;
+          border-radius: 8px; padding: 11px 13px; font: inherit; }
+  button { background: #d4a017; color: #1a1407; border: 0; border-radius: 8px;
+           padding: 11px 18px; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .rpc { margin-top: 10px; font-size: 12px; color: #889; }
+  .rpc input { font-size: 12px; padding: 6px 9px; }
+  .card { margin-top: 26px; background: #121219; border: 1px solid #24242f;
+          border-radius: 14px; padding: 22px; display: none; }
+  .badge { display: inline-block; padding: 5px 13px; border-radius: 999px;
+           font-weight: 700; font-size: 13px; letter-spacing: .3px; }
+  .b-Minted { background: #1f3a64; color: #bcd8ff; }
+  .b-Platform-Attested { background: #143b2a; color: #a7f0c8; }
+  .b-Anchored\ on\ Base { background: #3a3417; color: #f0e0a0; }
+  .b-Unverified { background: #3a1f1f; color: #f0b0b0; }
+  .art { margin: 18px 0; text-align: center; }
+  .art img { max-width: 100%; max-height: 320px; border-radius: 10px; border: 1px solid #24242f; }
+  dl { display: grid; grid-template-columns: 150px 1fr; gap: 8px 14px; margin: 16px 0 0; }
+  dt { color: #889; } dd { margin: 0; word-break: break-all; }
+  a { color: #6db3ff; }
+  .notes { margin-top: 18px; padding-top: 14px; border-top: 1px solid #24242f;
+           font-size: 12px; color: #889; }
+  .notes li { margin: 4px 0; }
+  .err { color: #f0a0a0; }
+  .muted { color: #667; }
+  code { background: #1c1c24; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔨 MythosForge — Proof Verifier <span class="muted">v2.5</span></h1>
+  <p class="sub">Verify any MythosForge creation <strong>without MythosForge</strong>.</p>
+
+  <div class="indep">
+    ✅ This page reads the <strong>Base blockchain directly</strong> and makes
+    <strong>zero calls to mythosforge.xyz</strong>. If our site disappeared, this still works.
+  </div>
+
+  <div class="row">
+    <input id="q" placeholder="Token id, 64-hex manifest hash, or 0x anchor/mint tx hash"
+           value="54851462332250288029513346248177259202425846707039409026292648779135787226601" />
+    <button id="go">Verify</button>
+  </div>
+  <div class="rpc">
+    Base RPC (swap for any public Base node — it's never ours):
+    <input id="rpc" value="https://mainnet.base.org" />
+  </div>
+
+  <div id="status" class="rpc"></div>
+
+  <div id="card" class="card">
+    <span id="badge" class="badge"></span>
+    <div id="art" class="art"></div>
+    <dl id="fields"></dl>
+    <ul id="notes" class="notes"></ul>
+  </div>
+</div>
+
+<script type="module">
+import { verifyCreation } from './verify-core.mjs';
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function run() {
+  const q = $('q').value.trim();
+  const rpcUrl = $('rpc').value.trim();
+  $('go').disabled = true;
+  $('card').style.display = 'none';
+  $('status').textContent = 'Reading Base…';
+  try {
+    const r = await verifyCreation(q, { rpcUrl }, (i, lo, hi) => {
+      $('status').textContent = `Scanning anchor logs on Base (window ${i + 1}: blocks ${lo}–${hi})…`;
+    });
+    $('status').textContent = '';
+    render(r);
+  } catch (e) {
+    $('status').innerHTML = `<span class="err">RPC error: ${esc(e.message)}</span> — try a different Base RPC above.`;
+  } finally {
+    $('go').disabled = false;
+  }
+}
+
+function render(r) {
+  if (!r.ok) { $('status').innerHTML = `<span class="err">${esc(r.message)}</span>`; return; }
+  $('badge').className = 'badge b-' + r.badge;
+  $('badge').textContent = r.badge + (r.minted ? ' · on Base' : '');
+
+  $('art').innerHTML = r.creation?.image ? `<img src="${esc(r.creation.image)}" alt="on-chain artwork" />`
+    : '<span class="muted">No on-chain image (token not minted / anchored only).</span>';
+
+  const rows = [];
+  const add = (k, v) => { if (v) rows.push(`<dt>${k}</dt><dd>${v}</dd>`); };
+  add('Creation', r.creation?.name ? esc(r.creation.name) : null);
+  add('Agent', r.creation?.agent ? esc(r.creation.agent) : null);
+  add('Model', r.creation?.model ? esc(r.creation.model) : null);
+  add('Created', r.creation?.creationDate ? esc(r.creation.creationDate) : null);
+  add('Token id', `<span class="muted">${esc(r.tokenId)}</span>`);
+  add('Manifest hash', `<code>${esc(r.manifestHash)}</code>`);
+  add('Minted on Base', r.minted ? 'Yes — ERC-1155 tokenURI resolves on-chain' : 'No');
+  if (r.anchor) {
+    add('Anchored by', `${esc(r.anchor.caller)} <span class="muted">(${r.anchor.source})</span>`);
+    add('Anchor tx', `<a href="${esc(r.anchor.basescan)}" target="_blank" rel="noopener">${esc(r.anchor.txHash.slice(0, 18))}… ↗</a>`);
+  } else {
+    add('Anchor', 'No anchor event found on-chain for this manifest hash');
+  }
+  add('Verified via', `<span class="muted">${esc(r.chain.rpcUrl)} · chain ${r.chain.chainId}</span>`);
+  $('fields').innerHTML = rows.join('');
+
+  $('notes').innerHTML = r.notes.map((n) => `<li>${esc(n)}</li>`).join('');
+  $('card').style.display = 'block';
+}
+
+$('go').addEventListener('click', run);
+$('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') run(); });
+</script>
+</body>
+</html>
