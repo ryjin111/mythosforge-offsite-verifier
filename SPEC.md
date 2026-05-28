@@ -83,6 +83,8 @@ manifest_hash   = lowercase_hex(sha256(canonical_bytes))      # 64 chars, no 0x
 
 Reference implementation: `canonicalize()` and `hashManifest()` in `apps/web/lib/v1-manifest.ts` (MythosForge application repo). Independent re-implementations should produce the identical 64-char hex digest for the same logical manifest.
 
+> This specification is **self-sufficient** — the six rules above are the normative source. Reference-implementation paths in this document are a courtesy for cross-checking; reimplementers do not need access to MythosForge's application code to be conformant.
+
 ---
 
 ## On-chain layout (Base mainnet, chain id 8453)
@@ -188,14 +190,16 @@ verifyCreation(input, config):
         tokenId, manifest_hash: manifest_hash_hex,
         minted, creation,
         anchor: { tx_hash, caller, source: platform | third-party } if anchored else null,
-        chain: { name: "base", chainId: 8453 },
+        chain: { name: "base", chainId: 8453 },        # implementation context
     }
 ```
+
+The **protocol-level result** is `badge`, `manifest_hash`, `tokenId`, `minted`, and `anchor`. The `chain` block is implementation context — a verifier MAY surface additional runtime metadata (e.g. `rpcUrl` actually used, scan window bounds, latency) as long as the protocol-level fields are present and computed correctly. Two conformant verifiers must agree on the protocol-level fields for the same input; they may differ in implementation context.
 
 Notes for implementers:
 
 - The public Base RPC caps `eth_getLogs` at ~10,000 blocks per call. Conformant verifiers paginate backward in 10k-block windows; the reference implementation uses 40 windows (~400k blocks), enough to cover the contract's lifetime to date.
-- `eth_call` returning `0x` (empty) for `uri(tokenId)` means *not minted*, not *error*. Treat as a clean negative.
+- `eth_call` returning `0x` (empty) for `uri(tokenId)` means *not minted*, not *error*. Treat as a clean negative. If a node *reverts* on an unknown id (some ERC-1155 implementations do), also treat as not-minted — unless the revert reason indicates a different protocol-level failure (RPC error, contract paused, etc.), which should propagate.
 - The verifier reads on-chain `Anchor` events directly — it does not require MythosForge's database or API. A verifier that calls `mythosforge.xyz` for any verification step is NOT conformant with this spec.
 
 ---
@@ -218,6 +222,9 @@ This document specifies **Proof of Creation v1**. Breaking changes (new required
 
 **Spec changelog:**
 - **v1** (this document) — initial publication. Covers manifest schema, canonicalization, on-chain layout, badge derivation, verify algorithm, and honest semantics.
+
+**Planned (forward-compatible) additions:**
+- **v1.1 (sign-at-generation)** — adds an optional `signature` field to the manifest: an agent-wallet signature over a digest of `{manifestHash, outputHash, timestamp}`, included in the Anchor call so verifiers can recover the signer and confirm it matches `submitter_wallet`. Backward-compatible: verifiers MAY check signatures when present; v1 manifests without signatures remain conformant. A new badge sub-status (*Creator-Signed*) may be added alongside the existing four, layered onto *Minted* / *Platform-Attested* / *Anchored on Base* rather than replacing them.
 
 ---
 
