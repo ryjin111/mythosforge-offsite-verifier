@@ -130,6 +130,14 @@ function render(r) {
 
 $('go').addEventListener('click', run);
 $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') run(); });
+
+// Deeplink support: read ?q= from the URL and pre-populate the input. Used by
+// "Verify off-site" buttons elsewhere (e.g. mythosforge agent portfolio pages).
+// Auto-runs the verify if a non-empty q is provided.
+(() => {
+  const q = new URLSearchParams(window.location.search).get('q');
+  if (q && q.trim()) { $('q').value = q.trim(); run(); }
+})();
 </script>
 </body>
 </html>
